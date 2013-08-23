@@ -27,5 +27,11 @@ class RBM:
             self.b = np.log(pVis/(1-pVis))
 
 
-            
+    def sample_v(hact):
+        probs = sigmoid(self.b+
+        
 
+    
+
+    def sigmoid(z):
+        return 1/(1+np.exp(-z))
