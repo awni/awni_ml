@@ -8,8 +8,8 @@ def sigmoid(z):
 def sample_binomial(probs):
     samples = probs.copy()
     mask = probs>0.5
-    sampless[mask] = 1
-    samples[!mask] = 0
+    samples[mask] = 1
+    samples[~mask] = 0
     return samples
     
     
@@ -27,14 +27,16 @@ class RBM:
         self.W = 0.01 * np.random.randn(self.visSize,self.hidSize)
         self.c = np.zeros((self.hidSize,1))
         
-        if data = None:
+        if data is None:
             self.b = np.zeros((self.visSize,1))
         else:
             # advice from Hinton (practical guide to training RBM)
             # init visible bias to log(p_i/(1-p_i)) where p_i is
             # fraction of training set that is on for ith unit
             pVis = np.sum(data>0.5,axis=1)
-            pVis = pVis/data.shape[1]
+            pVis = pVis/float(data.shape[1])
+            minAct = np.min(pVis[pVis>0])
+            pVis[pVis==0] = minAct
             self.b = np.log(pVis/(1-pVis))
 
     # updates params from unrolled vector
@@ -55,13 +57,17 @@ class RBM:
 
 
     # approximate gradient with CD-1 updates
-    def grad(data):
+    def grad(self,data):
 
+        # sampling
         p_h1 = self.sample_h(data)
         h1 = sample_binomial(p_h1)
         p_v2 = self.sample_v(h1)
         p_h2 = self.sample_h(p_v2)
         
+        # reconstruction cost
+        print "Reconstruction error is %f"%np.sqrt(np.sum((data-p_v2)**2))
+
         Wgrad = data.dot(p_h1.T) - p_v2.dot(p_h2.T)
         bgrad = np.sum(p_h1,axis=1) - np.sum(p_h2,axis=1)
         cgrad = np.sum(data,axis=1) - np.sum(p_v2,axis=1)
@@ -69,6 +75,7 @@ class RBM:
         # unroll gradient for optimizer
         grad = np.hstack((Wgrad.ravel(),bgrad.ravel(),cgrad.ravel()))
 
+        
 
 
     
