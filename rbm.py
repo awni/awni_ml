@@ -21,6 +21,7 @@ class RBM:
         self.W = None
         self.c = None
         self.b = None
+        self.numParams = visSize*hidSize+visSize+hidSize
 
     def initParams(self,data=None):
 
@@ -38,12 +39,13 @@ class RBM:
             minAct = np.min(pVis[pVis>0])
             pVis[pVis==0] = minAct
             self.b = np.log(pVis/(1-pVis))
+            self.b = self.b.reshape(-1,1)
 
     # updates params from unrolled vector
-    def setParams(self,theta):
-        self.W = theta[:self.W.size].reshape(self.visSize,self.hidSize)
-        self.b = theta[self.W.size:self.W.size+self.b.size].reshape(-1,1)
-        self.c = theta[self.W.size+self.b.size:].reshape(-1,1)
+    def updateParams(self,update):
+        self.W = self.W + update[:self.W.size].reshape(self.visSize,self.hidSize)
+        self.b = self.b + update[self.W.size:self.W.size+self.b.size].reshape(-1,1)
+        self.c = self.c + update[self.W.size+self.b.size:].reshape(-1,1)
 
     # sample the visible units
     def sample_v(self,h):
@@ -63,19 +65,22 @@ class RBM:
         p_h1 = self.sample_h(data)
         h1 = sample_binomial(p_h1)
         p_v2 = self.sample_v(h1)
-        p_h2 = self.sample_h(p_v2)
-        
-        # reconstruction cost
-        print "Reconstruction error is %f"%np.sqrt(np.sum((data-p_v2)**2))
+        #import sys
+        #sys.exit(0)
 
-        Wgrad = data.dot(p_h1.T) - p_v2.dot(p_h2.T)
-        bgrad = np.sum(p_h1,axis=1) - np.sum(p_h2,axis=1)
-        cgrad = np.sum(data,axis=1) - np.sum(p_v2,axis=1)
+        p_h2 = self.sample_h(p_v2)
+
+        # reconstruction cost
+        cost = np.sqrt(np.sum((data-p_v2)**2))
+
+        Wgrad = p_v2.dot(p_h2.T) - data.dot(p_h1.T)
+        bgrad = np.sum(p_h2,axis=1) - np.sum(p_h1,axis=1) 
+        cgrad = np.sum(p_v2,axis=1) - np.sum(data,axis=1)
 
         # unroll gradient for optimizer
         grad = np.hstack((Wgrad.ravel(),bgrad.ravel(),cgrad.ravel()))
 
-        
+        return cost,grad
 
 
     
