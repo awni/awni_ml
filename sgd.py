@@ -30,7 +30,7 @@ class SGD:
         mom = 0.5
 
         it = 0
-        for _ in xrange(self.epochs):
+        for e in xrange(self.epochs):
             # randomly select minibatch
             perm = np.random.permutation(range(m))
 
@@ -54,8 +54,10 @@ class SGD:
                 # update params
                 self.model.updateParams(-velocity)
                 
-                print "Reconstruction cost on iteration %d is %f"%(it,cost)
-
+                if it%100 == 0:
+                    print "Reconstruction cost on iteration %d is %f."%(it,cost)
+            
+            print "Done with epoch %d."%(e+1)
             # anneal learning rate by factor of 2 after each epoch
             self.alpha = self.alpha/2.0
             
