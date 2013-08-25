@@ -15,6 +15,7 @@ import numpy as np
 def sigmoid(z):
     return 1/(1+np.exp(-z))
 
+# sample binomial distribution
 def sample_binomial(probs):
     samples = probs.copy()
     mask = probs>0.5
@@ -131,42 +132,3 @@ class RBM:
             samples[:,numChains*i:numChains*(i+1)] = v
 
         return samples
-
-    # view the first min(hiddenSize,100) features as grayscale images
-    def view_weights(self,imDim):
-        
-        assert self.visSize%imDim == 0, \
-            "image dimension must divide visible size"
-
-        # reshape W into images
-        W_view = self.W.reshape(imDim,imDim,self.hidSize)
-
-        # view up to first 100 feats
-        self.view_patches(W_view,min(self.hidSize,100))
-
-    # helper function for plotting patches to an image
-    def view_patches(self,patches,num):
-        import matplotlib.pyplot as plt
-
-        xnum = int(np.sqrt(num))
-        if xnum**2 == num:
-            ynum = xnum
-        else:
-            ynum = xnum+1
-
-
-        patchDim = patches.shape[0]
-        if np.min(patches) < 0:
-            image = -np.ones(((patchDim+1)*ynum,(patchDim+1)*xnum))
-        else:
-            image = np.zeros(((patchDim+1)*ynum,(patchDim+1)*xnum))
-        for i in range(ynum):
-            for j in range(xnum):
-                imnum = i*xnum+j
-                if imnum>=num:
-                    break
-                image[i*(patchDim+1):i*(patchDim+1)+patchDim, \
-                      j*(patchDim+1):j*(patchDim+1)+patchDim] \
-                      = patches[:,:,imnum]
-        plt.imshow(image,cmap=plt.get_cmap('gray'))
-        plt.show()
