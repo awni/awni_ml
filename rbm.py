@@ -113,8 +113,24 @@ class RBM:
 
         return cost,grad
 
-    def gibbs_sample(self,mixTime=100,numsamples=5):
-        print "TODO"
+    # collect numSamples samples starting with data as initialization
+    # every 100 iterations of gibbs sampling.  Number of examples in 
+    # data will be number of chains
+    def gibbs_sample(self,numSamples,data):
+        numChains = data.shape[1]
+
+        samples = np.empty((self.visSize,numChains*numSamples))
+
+        v = data
+        step = 1000 # collect sample after step iterations
+        for i in range(numSamples):
+            for _ in range(step):
+                p_h = self.sample_h(v)  # sample hidden
+                h = sample_binomial(p_h)
+                v = self.sample_v(h) # sample visible
+            samples[:,numChains*i:numChains*(i+1)] = v
+
+        return samples
 
     # view the first min(hiddenSize,100) features as grayscale images
     def view_weights(self,imDim):
@@ -137,16 +153,20 @@ class RBM:
             ynum = xnum
         else:
             ynum = xnum+1
-            
+
+
         patchDim = patches.shape[0]
-        image = -np.ones(((patchDim+1)*xnum,(patchDim+1)*ynum))
+        if np.min(patches) < 0:
+            image = -np.ones(((patchDim+1)*ynum,(patchDim+1)*xnum))
+        else:
+            image = np.zeros(((patchDim+1)*ynum,(patchDim+1)*xnum))
         for i in range(ynum):
             for j in range(xnum):
                 imnum = i*xnum+j
-                if imnum>num:
+                if imnum>=num:
                     break
-                image[j*(patchDim+1):j*(patchDim+1)+patchDim, \
-                      i*(patchDim+1):i*(patchDim+1)+patchDim] \
+                image[i*(patchDim+1):i*(patchDim+1)+patchDim, \
+                      j*(patchDim+1):j*(patchDim+1)+patchDim] \
                       = patches[:,:,imnum]
         plt.imshow(image,cmap=plt.get_cmap('gray'))
         plt.show()

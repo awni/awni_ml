@@ -1,4 +1,17 @@
-
+# Author: Awni Hannun
+# Class: SGD - Stochastic Gradient Descent Optimizer
+# Runs stochastic gradient descent with momentum.
+# Options:
+#    model    :  model/objective to be optimized.  Must support
+#     the following methods- model.grad returns the unrolled 
+#     gradient with respect to every parameter, model.updateParams 
+#     accepts an update vector of deltas and updates all the 
+#     parameters of the model, model.numParams instance variable 
+#     for number of parameters in model.
+#    momentum  :  momentum to use
+#    epochs    :  number of epochs over full dataset
+#    alpha     :  learning rate
+#    minibatch :  size of minibatch
 
 import numpy as np
 
