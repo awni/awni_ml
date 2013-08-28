@@ -64,10 +64,11 @@ class SGD:
                 # update velocity
                 velocity = mom*velocity+self.alpha*np.squeeze(grad)
                 
+                #print "Weight norm is %f. Update norm is %f"%(np.sqrt(np.sum(self.model.W**2)),np.sqrt(np.sum(velocity**2)))
                 # update params
                 self.model.updateParams(-velocity)
                 
-                if it%100 == 0:
+                if it%10 == 0:
                     print "Reconstruction cost on iteration %d is %f."%(it,cost)
             
             print "Done with epoch %d."%(e+1)

@@ -1,22 +1,36 @@
-# Author: Awni Hannun
-# Class: RBM - Sparse (optional) Restricted Boltzmann Machine
-# Options:
-#   visSize   :  input dimension
-#   hidSize   :  number of hidden units
-#   sp_target :  target activation for hidden units 
-#     (if nonzero RBM is trained with cross entropy 
-#     sparsity penalty between average activation
-#      and target activation probabilities)
-#   sp_weight :  weight of sparsity penalty in parameter updates
+"""
+ Author: Awni Hannun
+ Class: RBM - Sparse (optional) Restricted Boltzmann Machine
+ Options:
+   visSize   :  input dimension
+   hidSize   :  number of hidden units
+   sp_target :  target activation for hidden units 
+     (if nonzero RBM is trained with cross entropy 
+     sparsity penalty between average activation
+      and target activation probabilities)
+   sp_weight :  weight of sparsity penalty in parameter updates
+"""
 
 import numpy as np
 
-# sigmoid function
 def sigmoid(z):
+    """
+    Sigmoid function
+    """
     return 1/(1+np.exp(-z))
 
-# sample binomial distribution
-def sample_binomial(probs):
+def gauss(z):
+    """
+    Gaussian with std=1 and mean=z
+    """
+    return np.random.standard_normal(size=z.shape)+z
+    #return 1/np.sqrt(2*np.pi)*np.exp(-(z**2)/2)
+
+
+def sample_bernoulli(probs):
+    """
+    Sample bernoulli distribution
+    """
     samples = probs.copy()
     mask = probs>0.5
     samples[mask] = 1
@@ -26,7 +40,7 @@ def sample_binomial(probs):
     
 class RBM:
     
-    def __init__(self,visSize,hidSize,sp_target=0,sp_weight=0):
+    def __init__(self,visSize,hidSize,sp_target=0,sp_weight=0,grbm=False):
         self.visSize = visSize
         self.hidSize = hidSize
         self.W = None
@@ -35,12 +49,16 @@ class RBM:
         self.numParams = visSize*hidSize+visSize+hidSize
         self.p = sp_target  # target sparsity
         self.beta = sp_weight # weight of sparsity penalty
-        self.lam = 0.9 # weight for averaging activation probas
+        self.lam = 0.5 # weight for averaging activation probas
         if self.p!=0:
             self.q = np.zeros(self.hidSize)
+        self.grbm = grbm
         
     def initParams(self,data=None):
-
+        """
+        Initialize parameters for RBM using unifrom based on
+        fanin-fanout.
+        """
         # initialize W uniformly on +/- 4*sqrt(6/(fanin+fanout))
         range = 4.0*np.sqrt(6.0/(self.visSize+self.hidSize))
         self.W = range*(2*np.random.rand(self.visSize,self.hidSize)-1)
@@ -60,33 +78,45 @@ class RBM:
             self.b = np.log(pVis/(1-pVis))
             self.b = self.b.reshape(-1,1)
 
-    # updates params from unrolled vector
+
     def updateParams(self,update):
+        """
+        updates params from unrolled vector
+        """
+
         self.W = self.W + update[:self.W.size].reshape(self.visSize,self.hidSize)
         self.b = self.b + update[self.W.size:self.W.size+self.b.size].reshape(-1,1)
         self.c = self.c + update[self.W.size+self.b.size:].reshape(-1,1)
 
-    # sample the visible units
+
     def sample_v(self,h):
-        probs = sigmoid(self.b+self.W.dot(h))
+        """
+        sample the visible units
+        """
+
+        if self.grbm==True:
+            probs = gauss(self.b+self.W.dot(h))
+        else:
+            probs = sigmoid(self.b+self.W.dot(h))
+
         return probs
 
-    # sample the hidden units
+
     def sample_h(self,v):
+        """
+        Sample the hidden units
+        """
         probs = sigmoid(self.c+self.W.T.dot(v))
         return probs
 
-
-    # approximate gradient with CD-1 updates
     def grad(self,data):
-
+        """
+        approximate gradient with CD-1 updates
+        """
         # sampling
         p_h1 = self.sample_h(data)
-        h1 = sample_binomial(p_h1)
+        h1 = sample_bernoulli(p_h1)
         p_v2 = self.sample_v(h1)
-        #import sys
-        #sys.exit(0)
-
         p_h2 = self.sample_h(p_v2)
 
         # reconstruction cost
@@ -106,7 +136,7 @@ class RBM:
             del_sp = self.q - self.p
 
             # add in gradient from sparsity penalty
-            Wgrad += self.beta*data.dot(np.tile(del_sp.reshape(-1,1),[1,m]).T) 
+            #Wgrad += self.beta*data.dot(np.tile(del_sp.reshape(-1,1),[1,m]).T) 
             cgrad = cgrad + self.beta*del_sp
             
         # unroll gradient for optimizer
@@ -114,10 +144,13 @@ class RBM:
 
         return cost,grad
 
-    # collect numSamples samples starting with data as initialization
-    # every 100 iterations of gibbs sampling.  Number of examples in 
-    # data will be number of chains
     def gibbs_sample(self,numSamples,data):
+        """
+        Collect numSamples samples starting with data as initialization
+        every 1000 iterations of gibbs sampling.  Number of examples in 
+        data will be number of chains.
+        """
+
         numChains = data.shape[1]
 
         samples = np.empty((self.visSize,numChains*numSamples))
@@ -127,7 +160,7 @@ class RBM:
         for i in range(numSamples):
             for _ in range(step):
                 p_h = self.sample_h(v)  # sample hidden
-                h = sample_binomial(p_h)
+                h = sample_bernoulli(p_h)
                 v = self.sample_v(h) # sample visible
             samples[:,numChains*i:numChains*(i+1)] = v
 
