@@ -15,12 +15,12 @@
     minibatch :  size of minibatch
 """
 import numpy as np
-
+import gnumpy as gp
 
 class SGD:
 
     def __init__(self,model,momentum=0.9,epochs=1,alpha=1e-2,
-                 minibatch=256):
+                 minibatch=256,gpu=False):
         
         self.model = model
 
@@ -30,6 +30,7 @@ class SGD:
         self.epochs = epochs # number of epochs through the data
         self.alpha = alpha # learning rate
         self.minibatch = minibatch # minibatch
+        self.gpu = gpu # use gpu?
 
     def run(self,data,labels=None):
         """
@@ -40,7 +41,7 @@ class SGD:
         m = data.shape[1]
         
         # momentum setup
-        velocity = np.zeros(self.model.numParams)
+        #velocity = np.zeros(self.model.numParams)
         momIncrease = 500
         mom = 0.5
 
@@ -53,9 +54,11 @@ class SGD:
                 it += 1
 
                 mb_data = data[:,perm[i:i+self.minibatch]]
+                if self.gpu:
+                    mb_data = gp.garray(mb_data)
 
                 if labels is None:
-                    cost,grad = self.model.grad(mb_data)
+                    cost,grad = self.model.costAndGrad(mb_data)
                 else:
                     mb_labels = labels[perm[i:i+self.minibatch]]
                     cost,grad = self.model.costAndGrad(mb_data,mb_labels)
@@ -64,16 +67,13 @@ class SGD:
                     mom = self.momentum
 
                 # update velocity
-                velocity = mom*velocity+self.alpha*np.squeeze(grad)
-                
-                #print "Weight norm is %f. Update norm is %f"%(np.sqrt(np.sum(self.model.W**2)),np.sqrt(np.sum(velocity**2)))
+                #velocity = mom*velocity+self.alpha*np.squeeze(grad)
+
                 # update params
-                self.model.updateParams(-velocity)
-                
+                self.model.updateParams(-self.alpha,grad)
+
                 if it%10 == 0:
-                    print "Reconstruction cost on iteration %d is %f."%(it,cost)
-            
+                    print "Cost on iteration %d is %f."%(it,cost)
+
             print "Done with epoch %d."%(e+1)
-            # anneal learning rate by factor of 2 after each epoch
-            self.alpha = self.alpha/2.0
             

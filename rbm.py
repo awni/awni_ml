@@ -109,7 +109,7 @@ class RBM:
         probs = sigmoid(self.c+self.W.T.dot(v))
         return probs
 
-    def grad(self,data):
+    def costAndGrad(self,data):
         """
         approximate gradient with CD-1 updates
         """
